@@ -22,4 +22,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'capistrano', '~> 3.1'
   spec.add_dependency 'capistrano-bundler', '~> 1.1'
+  spec.add_dependency 'rvm-capistrano'
+  spec.add_dependency 'capistrano-rvm'
+  spec.add_dependency 'dump'
 end

@@ -18,7 +18,7 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+rails g procommerz_cap_tasks:install
 
 ## Contributing
 
