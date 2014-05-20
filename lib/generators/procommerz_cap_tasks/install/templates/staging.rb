@@ -7,11 +7,7 @@ set :ssh_options, {
     auth_methods: %w(publickey)
 }
 
-set :repo_url, "git@example.com:me/my_repo.git"
-set :branch, "master"
-set :scm, :git
-
-set :local_path, "/home/rails/htdocs"
+set :rails_env, "staging"
 
 # and/or per server
 # server 'example.com',
