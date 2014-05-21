@@ -10,33 +10,92 @@ namespace :stack do
 
   desc "Update remote server with latest branch code"
   task :deploy do
-    on roles(:app) do
-      within fetch(:deploy_to) do
-        puts "\nUpdating from git repo..."
-        execute :git, :pull
+    invoke "stack:git:pull"
 
-        puts "\nUpdating bundle..."
-        execute :bundle, "install"
+    invoke "stack:gems:update"
 
-        puts "\nBacking up the database for easy rollback..."
-        execute :rake, "dump"
+    invoke "stack:db:dump"
 
-        # puts "\nUpdating the database..."
-        # execute :rake, "db:migrate"
-        #
-        # puts "\nClearing application cache..."
-        # execute :rake, "tmp:cache:clear"
+    invoke "stack:db:migrate"
+
+    invoke "stack:assets:precompile"
+
+    invoke "stack:assets:clear_cache"
+
+    invoke "stack:server:restart"
+  end
+
+  namespace :git do
+
+    desc "Update from git repo"
+    task :pull do
+      on roles(:app) do
+        within fetch(:deploy_to) do
+          puts "\nUpdating from git repo..."
+          execute :git, :pull
+        end
       end
     end
+
+  end
+
+  namespace :gems do
+
+    desc "Update gems"
+    task :update do
+      on roles(:app) do
+        within fetch(:deploy_to) do
+          puts "\nUpdating bundle..."
+          execute :bundle, "install"
+        end
+      end
+    end
+
   end
 
   namespace :db do
+
+    desc "Dump database using toy/dump gem"
+    task :dump do
+      on roles(:db) do
+        within fetch(:deploy_to) do
+          puts "\nBacking up the database..."
+          execute :rake, "dump"
+        end
+      end
+    end
+
+    desc "Run migrations"
+    task :migrate do
+      on roles(:db) do
+        within fetch(:deploy_to) do
+          puts "\nUpdating the database..."
+          execute :rake, "db:migrate"
+        end
+      end
+    end
 
     namespace :remote do
 
       desc "Overwrite local database with remote [staging or production] database copy, including data and structure"
       task :pull do
+        puts "\nUpdating local database from remote server..."
 
+        invoke "stack:db:dump"
+
+        on roles(:db) do |host|
+          if host.port != 22
+            ssh_argument = "--rsh='ssh -p#{host.port}'"
+          else
+            ssh_argument = "--rsh=ssh"
+          end
+
+          puts %x{rsync #{ssh_argument} --recursive --times --compress --human-readable --progress --exclude .git* #{host.user}@#{host.hostname}:#{fetch(:deploy_to)}/dump ./}
+        end
+
+        puts "\nRestoring dump..."
+
+        puts %x{bundle exec rake dump:restore}
       end
 
     end
@@ -45,9 +104,62 @@ namespace :stack do
 
       desc "Overwrite remote database with local [development] database copy, including data and structure"
       task :push do
+        puts "\nUpdating remote database from local one..."
 
+        puts %x{bundle exec rake dump}
+
+        on roles(:db) do |host|
+          if host.port != 22
+            ssh_argument = "--rsh='ssh -p#{host.port}'"
+          else
+            ssh_argument = "--rsh=ssh"
+          end
+
+          puts %x{rsync #{ssh_argument} --recursive --times --compress --human-readable --progress --exclude .git* ./dump #{host.user}@#{host.hostname}:#{local_path}/}
+
+          puts "\nRestoring dump..."
+
+          within fetch(:deploy_to) do
+            execute :bundle, "exec", "rake dump:restore"
+          end
+        end
+
+        invoke "stack:assets:clear_cache"
       end
 
+    end
+
+  end
+
+  namespace :assets do
+
+    desc "Precompile rails assets"
+    task :precompile do
+      on roles(:app) do
+        within fetch(:deploy_to) do
+          puts "\nPrecompiling assets..."
+          execute :rake, "assets:precompile"
+        end
+      end
+    end
+
+    desc "Clear assets cache"
+    task :clear_cache do
+      on roles(:app) do
+        within fetch(:deploy_to) do
+          puts "\nClearing application cache..."
+          execute :rake, "tmp:cache:clear"
+        end
+      end
+    end
+
+    desc "Update app with the latest version from git and recompiles assets"
+    task :update do
+      invoke "stack:git:pull"
+
+      invoke "stack:assets:precompile"
+
+      invoke "stack:assets:clear_cache"
     end
 
   end
@@ -56,20 +168,16 @@ namespace :stack do
 
     desc "Restart unicorn server"
     task :restart do
-
+      on roles(:app) do
+        within fetch(:deploy_to) do
+          puts "\nRestarting unicorn..."
+          execute :service, "unicorn stop"
+          execute :service, "unicorn start"
+        end
+      end
     end
 
   end
-
-  namespace :assets do
-
-    desc "Update app with the latest version from git and recompiles assets"
-    task :update do
-
-    end
-
-  end
-
 
 
   # task :deploy_no_migrations do
