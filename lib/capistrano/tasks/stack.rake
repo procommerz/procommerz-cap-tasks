@@ -172,6 +172,7 @@ namespace :stack do
         within fetch(:deploy_to) do
           puts "\nRestarting unicorn..."
           execute :service, "unicorn stop"
+          sleep 1
           execute :service, "unicorn start"
         end
       end
