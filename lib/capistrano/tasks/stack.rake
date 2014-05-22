@@ -23,9 +23,11 @@ namespace :stack do
     invoke "stack:assets:clear_cache"
 
     # Fix permissions (because capistrano is usually run as root for our configurations)
-    within fetch(:deploy_to) do
-      puts "Updating permissions..."
-      execute :chown, '-R', 'rails:rails', './'
+    on roles(:app) do
+      within fetch(:deploy_to) do
+        puts "Updating permissions..."
+        execute :chown, '-R', 'rails:rails', './'
+      end
     end
 
     invoke "stack:server:restart"
