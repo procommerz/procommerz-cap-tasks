@@ -149,8 +149,10 @@ namespace :stack do
     task :precompile do
       on roles(:app) do
         within fetch(:deploy_to) do
-          puts "\nPrecompiling assets..."
-          execute :rake, "assets:precompile"
+          with rails_env: fetch(:rails_env) do
+            puts "\nPrecompiling assets..."
+            execute :rake, "assets:precompile"
+          end
         end
       end
     end
@@ -159,8 +161,10 @@ namespace :stack do
     task :clear_cache do
       on roles(:app) do
         within fetch(:deploy_to) do
-          puts "\nClearing application cache..."
-          execute :rake, "tmp:cache:clear"
+          with rails_env: fetch(:rails_env) do
+            puts "\nClearing application cache..."
+            execute :rake, "tmp:cache:clear"
+          end
         end
       end
     end
