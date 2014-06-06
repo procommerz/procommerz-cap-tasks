@@ -67,8 +67,10 @@ namespace :stack do
     task :dump do
       on roles(:db) do
         within fetch(:deploy_to) do
-          puts "\nBacking up the database..."
-          execute :rake, "dump"
+          with rails_env: fetch(:rails_env) do
+            puts "\nBacking up the database..."
+            execute :rake, "dump"
+          end
         end
       end
     end
@@ -77,8 +79,10 @@ namespace :stack do
     task :migrate do
       on roles(:db) do
         within fetch(:deploy_to) do
-          puts "\nUpdating the database..."
-          execute :rake, "db:migrate"
+          with rails_env: fetch(:rails_env) do
+            puts "\nUpdating the database..."
+            execute :rake, "db:migrate"
+          end
         end
       end
     end
@@ -187,7 +191,6 @@ namespace :stack do
     end
 
   end
-
 
   # task :deploy_no_migrations do
   #   on roles(:app) do
